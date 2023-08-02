@@ -512,32 +512,33 @@
       // supported natively by Shiny at the time of this writing.
 
       shinyBinding.renderValue = function(el, data) {
-        Shiny.renderDependencies(data.deps);
-        // Resolve strings marked as javascript literals to objects
-        if (!(data.evals instanceof Array)) data.evals = [data.evals];
-        for (var i = 0; data.evals && i < data.evals.length; i++) {
-          window.HTMLWidgets.evaluateStringMember(data.x, data.evals[i]);
-        }
-        if (!bindingDef.renderOnNullValue) {
-          if (data.x === null) {
-            el.style.visibility = "hidden";
-            return;
-          } else {
-            el.style.visibility = "inherit";
+        Shiny.renderDependenciesAsync(data.deps).then(() => {
+          // Resolve strings marked as javascript literals to objects
+          if (!(data.evals instanceof Array)) data.evals = [data.evals];
+          for (var i = 0; data.evals && i < data.evals.length; i++) {
+            window.HTMLWidgets.evaluateStringMember(data.x, data.evals[i]);
           }
-        }
-        if (!elementData(el, "initialized")) {
-          initSizing(el);
+          if (!bindingDef.renderOnNullValue) {
+            if (data.x === null) {
+              el.style.visibility = "hidden";
+              return;
+            } else {
+              el.style.visibility = "inherit";
+            }
+          }
+          if (!elementData(el, "initialized")) {
+            initSizing(el);
 
-          elementData(el, "initialized", true);
-          if (bindingDef.initialize) {
-            var rect = el.getBoundingClientRect();
-            var result = bindingDef.initialize(el, rect.width, rect.height);
-            elementData(el, "init_result", result);
+            elementData(el, "initialized", true);
+            if (bindingDef.initialize) {
+              var rect = el.getBoundingClientRect();
+              var result = bindingDef.initialize(el, rect.width, rect.height);
+              elementData(el, "init_result", result);
+            }
           }
-        }
-        bindingDef.renderValue(el, data.x, elementData(el, "init_result"));
-        evalAndRun(data.jsHooks.render, elementData(el, "init_result"), [el, data.x]);
+          bindingDef.renderValue(el, data.x, elementData(el, "init_result"));
+          evalAndRun(data.jsHooks.render, elementData(el, "init_result"), [el, data.x]);
+        });
       };
 
       // Only override resize if bindingDef implements it
